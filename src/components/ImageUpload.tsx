@@ -12,6 +12,7 @@ interface ImageUploadProps {
 const ImageUpload: React.FC<ImageUploadProps> = ({ onImageSelected }) => {
   const [dragActive, setDragActive] = useState(false);
   const { toast } = useToast();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -48,6 +49,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onImageSelected }) => {
     }
   }, [onImageSelected]);
 
+  const handleButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <Card className={`p-8 relative transition-all duration-300 ease-in-out
       ${dragActive ? 'border-sage-500 bg-sage-50' : 'border-dashed border-2 hover:border-sage-300'}`}
@@ -61,7 +66,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onImageSelected }) => {
         accept="image/*"
         onChange={handleChange}
         className="hidden"
-        id="image-upload"
+        ref={fileInputRef}
       />
       <div className="flex flex-col items-center justify-center gap-4">
         {dragActive ? (
@@ -77,11 +82,13 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onImageSelected }) => {
             or click to select a file
           </p>
         </div>
-        <label htmlFor="image-upload">
-          <Button variant="outline" className="mt-2">
-            Select Image
-          </Button>
-        </label>
+        <Button 
+          variant="outline" 
+          className="mt-2"
+          onClick={handleButtonClick}
+        >
+          Select Image
+        </Button>
       </div>
     </Card>
   );
