@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import ImageUpload from '../components/ImageUpload';
 import AnalysisResult from '../components/AnalysisResult';
@@ -25,10 +24,11 @@ const Index = () => {
     setAnalyzing(true);
 
     try {
-      // Create image classification pipeline with a public model
+      // Create image classification pipeline with a WebGPU-compatible model
       const classifier = await pipeline(
         'image-classification',
-        'microsoft/resnet-50',
+        'onnx-community/mobilenetv4_conv_small.e2400_r224_in1k',
+        { device: 'webgpu' }
       ) as ImageClassificationPipeline;
 
       // Convert the File to a format the model can process
@@ -42,14 +42,13 @@ const Index = () => {
 
       // Map the model's output to our risk levels
       const primaryResult = results[0];
-      let risk: 'low' | 'medium' | 'high';
       
-      // Convert model prediction to risk level
-      // For this general-purpose model, we'll use different thresholds
+      // Convert model prediction to risk level based on confidence
       const score = primaryResult.score;
-      if (score > 0.9) {
+      let risk: 'low' | 'medium' | 'high';
+      if (score > 0.85) {
         risk = 'high';
-      } else if (score > 0.7) {
+      } else if (score > 0.6) {
         risk = 'medium';
       } else {
         risk = 'low';
