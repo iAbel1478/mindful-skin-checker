@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import ImageUpload from '../components/ImageUpload';
 import AnalysisResult from '../components/AnalysisResult';
 import { Card } from "@/components/ui/card";
+import { pipeline } from '@huggingface/transformers';
+import { useToast } from "@/components/ui/use-toast";
 
 const Index = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -11,20 +13,54 @@ const Index = () => {
     risk: 'low' | 'medium' | 'high';
     confidence: number;
   } | null>(null);
+  const { toast } = useToast();
 
   const handleImageSelected = async (image: File) => {
     setSelectedImage(image);
     setAnalyzing(true);
-    
-    // Simulate analysis (replace with actual AI model integration)
-    setTimeout(() => {
-      const mockResult = {
-        risk: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)] as 'low' | 'medium' | 'high',
-        confidence: 0.7 + Math.random() * 0.2
-      };
-      setResult(mockResult);
+
+    try {
+      // Create image classification pipeline
+      const classifier = await pipeline(
+        'image-classification',
+        'nielsr/vit-skin-cancer-detection',
+        { quantized: true }
+      );
+
+      // Convert the File to a format the model can process
+      const imageUrl = URL.createObjectURL(image);
+      
+      // Analyze the image
+      const results = await classifier(imageUrl);
+      
+      // Clean up the object URL
+      URL.revokeObjectURL(imageUrl);
+
+      // Map the model's output to our risk levels
+      const primaryResult = results[0];
+      let risk: 'low' | 'medium' | 'high';
+      
+      // Convert model prediction to risk level
+      if (primaryResult.label === 'benign') {
+        risk = primaryResult.score > 0.8 ? 'low' : 'medium';
+      } else {
+        risk = primaryResult.score > 0.7 ? 'high' : 'medium';
+      }
+
+      setResult({
+        risk,
+        confidence: primaryResult.score
+      });
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast({
+        title: "Analysis Error",
+        description: "There was an error analyzing the image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setAnalyzing(false);
-    }, 2000);
+    }
   };
 
   const handleReset = () => {
