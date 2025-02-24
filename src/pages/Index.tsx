@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import ImageUpload from '../components/ImageUpload';
 import AnalysisResult from '../components/AnalysisResult';
@@ -25,49 +24,32 @@ const Index = () => {
     setAnalyzing(true);
 
     try {
-      // Use a medical-specific image classification model
       const classifier = await pipeline(
         'image-classification',
-        'medicalai/clinical-vision-melanoma-classifier',
+        'google/dermnet',
         { device: 'webgpu' }
       ) as ImageClassificationPipeline;
 
-      // Convert the File to a format the model can process
       const imageUrl = URL.createObjectURL(image);
-      
-      // Analyze the image
       const results = await classifier(imageUrl) as ClassificationResult[];
-      
-      // Clean up the object URL
       URL.revokeObjectURL(imageUrl);
 
-      // Get the primary classification result
       const primaryResult = results[0];
       console.log('Classification results:', results);
 
-      // Map model predictions to risk levels based on medical thresholds
-      // These thresholds are based on medical literature for melanoma detection
       let risk: 'low' | 'medium' | 'high';
       const score = primaryResult.score;
+      const label = primaryResult.label.toLowerCase();
 
-      if (primaryResult.label.toLowerCase().includes('melanoma') || 
-          primaryResult.label.toLowerCase().includes('malignant')) {
-        if (score > 0.7) {
-          risk = 'high';
-        } else if (score > 0.4) {
-          risk = 'medium';
-        } else {
-          risk = 'low';
-        }
+      const highRiskConditions = ['melanoma', 'squamous cell carcinoma', 'basal cell carcinoma'];
+      const mediumRiskConditions = ['actinic keratosis', 'dysplastic nevus', 'atypical mole'];
+
+      if (highRiskConditions.some(condition => label.includes(condition))) {
+        risk = score > 0.6 ? 'high' : score > 0.3 ? 'medium' : 'low';
+      } else if (mediumRiskConditions.some(condition => label.includes(condition))) {
+        risk = score > 0.7 ? 'medium' : 'low';
       } else {
-        // For benign classifications, adjust the risk level accordingly
-        if (score > 0.85) {
-          risk = 'low';
-        } else if (score > 0.6) {
-          risk = 'medium';
-        } else {
-          risk = 'high';
-        }
+        risk = score > 0.8 ? 'low' : score > 0.5 ? 'medium' : 'high';
       }
 
       setResult({
