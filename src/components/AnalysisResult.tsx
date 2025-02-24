@@ -69,7 +69,7 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ risk, confidence, onRes
             </Button>
             <Button
               className="w-full bg-sage-600 hover:bg-sage-700"
-              onClick={() => window.open('https://www.aad.org/', '_blank')}
+              onClick={() => window.open('https://www.aad.org/public/diseases/skin-cancer/find-dermatologist', '_blank')}
             >
               Find a Dermatologist
             </Button>

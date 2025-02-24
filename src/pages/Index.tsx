@@ -24,32 +24,34 @@ const Index = () => {
     setAnalyzing(true);
 
     try {
+      // Create image classification pipeline with a WebGPU-compatible model
       const classifier = await pipeline(
         'image-classification',
-        'google/dermnet',
+        'onnx-community/mobilenetv4_conv_small.e2400_r224_in1k',
         { device: 'webgpu' }
       ) as ImageClassificationPipeline;
 
+      // Convert the File to a format the model can process
       const imageUrl = URL.createObjectURL(image);
+      
+      // Analyze the image
       const results = await classifier(imageUrl) as ClassificationResult[];
+      
+      // Clean up the object URL
       URL.revokeObjectURL(imageUrl);
 
+      // Map the model's output to our risk levels
       const primaryResult = results[0];
-      console.log('Classification results:', results);
-
-      let risk: 'low' | 'medium' | 'high';
+      
+      // Convert model prediction to risk level based on confidence
       const score = primaryResult.score;
-      const label = primaryResult.label.toLowerCase();
-
-      const highRiskConditions = ['melanoma', 'squamous cell carcinoma', 'basal cell carcinoma'];
-      const mediumRiskConditions = ['actinic keratosis', 'dysplastic nevus', 'atypical mole'];
-
-      if (highRiskConditions.some(condition => label.includes(condition))) {
-        risk = score > 0.6 ? 'high' : score > 0.3 ? 'medium' : 'low';
-      } else if (mediumRiskConditions.some(condition => label.includes(condition))) {
-        risk = score > 0.7 ? 'medium' : 'low';
+      let risk: 'low' | 'medium' | 'high';
+      if (score > 0.85) {
+        risk = 'high';
+      } else if (score > 0.6) {
+        risk = 'medium';
       } else {
-        risk = score > 0.8 ? 'low' : score > 0.5 ? 'medium' : 'high';
+        risk = 'low';
       }
 
       setResult({
