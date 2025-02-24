@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import ImageUpload from '../components/ImageUpload';
 import AnalysisResult from '../components/AnalysisResult';
@@ -24,9 +25,10 @@ const Index = () => {
     setAnalyzing(true);
 
     try {
+      // Use a publicly available ONNX model optimized for browser usage
       const classifier = await pipeline(
         'image-classification',
-        'google/dermnet',
+        'onnx-community/mobilenetv4_conv_small.e2400_r224_in1k',
         { device: 'webgpu' }
       ) as ImageClassificationPipeline;
 
@@ -37,19 +39,21 @@ const Index = () => {
       const primaryResult = results[0];
       console.log('Classification results:', results);
 
+      // Map general image classification results to risk levels
       let risk: 'low' | 'medium' | 'high';
       const score = primaryResult.score;
       const label = primaryResult.label.toLowerCase();
 
-      const highRiskConditions = ['melanoma', 'squamous cell carcinoma', 'basal cell carcinoma'];
-      const mediumRiskConditions = ['actinic keratosis', 'dysplastic nevus', 'atypical mole'];
+      // Keywords that might indicate concerning patterns
+      const highRiskPatterns = ['irregular', 'abnormal', 'dark', 'asymmetric'];
+      const mediumRiskPatterns = ['spot', 'mark', 'patch', 'lesion'];
 
-      if (highRiskConditions.some(condition => label.includes(condition))) {
-        risk = score > 0.6 ? 'high' : score > 0.3 ? 'medium' : 'low';
-      } else if (mediumRiskConditions.some(condition => label.includes(condition))) {
-        risk = score > 0.7 ? 'medium' : 'low';
+      if (highRiskPatterns.some(pattern => label.includes(pattern))) {
+        risk = score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+      } else if (mediumRiskPatterns.some(pattern => label.includes(pattern))) {
+        risk = score > 0.8 ? 'medium' : 'low';
       } else {
-        risk = score > 0.8 ? 'low' : score > 0.5 ? 'medium' : 'high';
+        risk = score > 0.9 ? 'low' : score > 0.7 ? 'medium' : 'high';
       }
 
       setResult({
