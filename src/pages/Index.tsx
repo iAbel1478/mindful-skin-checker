@@ -25,35 +25,34 @@ const Index = () => {
     setAnalyzing(true);
 
     try {
-      // Use a publicly available ONNX model optimized for browser usage
+      // Create image classification pipeline with a public model
       const classifier = await pipeline(
         'image-classification',
-        'onnx-community/mobilenetv4_conv_small.e2400_r224_in1k',
-        { device: 'webgpu' }
+        'microsoft/resnet-50',
       ) as ImageClassificationPipeline;
 
+      // Convert the File to a format the model can process
       const imageUrl = URL.createObjectURL(image);
+      
+      // Analyze the image
       const results = await classifier(imageUrl) as ClassificationResult[];
+      
+      // Clean up the object URL
       URL.revokeObjectURL(imageUrl);
 
+      // Map the model's output to our risk levels
       const primaryResult = results[0];
-      console.log('Classification results:', results);
-
-      // Map general image classification results to risk levels
       let risk: 'low' | 'medium' | 'high';
+      
+      // Convert model prediction to risk level
+      // For this general-purpose model, we'll use different thresholds
       const score = primaryResult.score;
-      const label = primaryResult.label.toLowerCase();
-
-      // Keywords that might indicate concerning patterns
-      const highRiskPatterns = ['irregular', 'abnormal', 'dark', 'asymmetric'];
-      const mediumRiskPatterns = ['spot', 'mark', 'patch', 'lesion'];
-
-      if (highRiskPatterns.some(pattern => label.includes(pattern))) {
-        risk = score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
-      } else if (mediumRiskPatterns.some(pattern => label.includes(pattern))) {
-        risk = score > 0.8 ? 'medium' : 'low';
+      if (score > 0.9) {
+        risk = 'high';
+      } else if (score > 0.7) {
+        risk = 'medium';
       } else {
-        risk = score > 0.9 ? 'low' : score > 0.7 ? 'medium' : 'high';
+        risk = 'low';
       }
 
       setResult({
