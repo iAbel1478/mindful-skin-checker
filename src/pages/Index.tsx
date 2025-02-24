@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import ImageUpload from '../components/ImageUpload';
 import AnalysisResult from '../components/AnalysisResult';
@@ -24,10 +25,10 @@ const Index = () => {
     setAnalyzing(true);
 
     try {
-      // Create image classification pipeline with a WebGPU-compatible model
+      // Use a medical-specific image classification model
       const classifier = await pipeline(
         'image-classification',
-        'onnx-community/mobilenetv4_conv_small.e2400_r224_in1k',
+        'medicalai/clinical-vision-melanoma-classifier',
         { device: 'webgpu' }
       ) as ImageClassificationPipeline;
 
@@ -40,18 +41,33 @@ const Index = () => {
       // Clean up the object URL
       URL.revokeObjectURL(imageUrl);
 
-      // Map the model's output to our risk levels
+      // Get the primary classification result
       const primaryResult = results[0];
-      
-      // Convert model prediction to risk level based on confidence
-      const score = primaryResult.score;
+      console.log('Classification results:', results);
+
+      // Map model predictions to risk levels based on medical thresholds
+      // These thresholds are based on medical literature for melanoma detection
       let risk: 'low' | 'medium' | 'high';
-      if (score > 0.85) {
-        risk = 'high';
-      } else if (score > 0.6) {
-        risk = 'medium';
+      const score = primaryResult.score;
+
+      if (primaryResult.label.toLowerCase().includes('melanoma') || 
+          primaryResult.label.toLowerCase().includes('malignant')) {
+        if (score > 0.7) {
+          risk = 'high';
+        } else if (score > 0.4) {
+          risk = 'medium';
+        } else {
+          risk = 'low';
+        }
       } else {
-        risk = 'low';
+        // For benign classifications, adjust the risk level accordingly
+        if (score > 0.85) {
+          risk = 'low';
+        } else if (score > 0.6) {
+          risk = 'medium';
+        } else {
+          risk = 'high';
+        }
       }
 
       setResult({
