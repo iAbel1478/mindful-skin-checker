@@ -43,14 +43,14 @@ const Index = () => {
       // Map the model's output to our risk levels
       const primaryResult = results[0];
       
-      // Convert model prediction to risk level based on confidence
+      // Convert model prediction to risk level based on new confidence thresholds
       const score = primaryResult.score;
       let risk: 'low' | 'medium' | 'high';
-      if (score > 0.85) {
+      if (score >= 0.7) { // >=70%
         risk = 'high';
-      } else if (score > 0.6) {
+      } else if (score >= 0.4) { // 40-69%
         risk = 'medium';
-      } else {
+      } else { // <40%
         risk = 'low';
       }
 
