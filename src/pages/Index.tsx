@@ -1,8 +1,14 @@
-
 import React, { useState } from 'react';
 import ImageUpload from '../components/ImageUpload';
 import AnalysisResult from '../components/AnalysisResult';
 import { Card } from "@/components/ui/card";
+import { pipeline, ImageClassificationPipeline } from '@huggingface/transformers';
+import { useToast } from "@/components/ui/use-toast";
+
+interface ClassificationResult {
+  label: string;
+  score: number;
+}
 
 const Index = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -11,20 +17,55 @@ const Index = () => {
     risk: 'low' | 'medium' | 'high';
     confidence: number;
   } | null>(null);
+  const { toast } = useToast();
 
   const handleImageSelected = async (image: File) => {
     setSelectedImage(image);
     setAnalyzing(true);
-    
-    // Simulate analysis (replace with actual AI model integration)
-    setTimeout(() => {
-      const mockResult = {
-        risk: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)] as 'low' | 'medium' | 'high',
-        confidence: 0.7 + Math.random() * 0.2
-      };
-      setResult(mockResult);
+
+    try {
+      const classifier = await pipeline(
+        'image-classification',
+        'google/dermnet',
+        { device: 'webgpu' }
+      ) as ImageClassificationPipeline;
+
+      const imageUrl = URL.createObjectURL(image);
+      const results = await classifier(imageUrl) as ClassificationResult[];
+      URL.revokeObjectURL(imageUrl);
+
+      const primaryResult = results[0];
+      console.log('Classification results:', results);
+
+      let risk: 'low' | 'medium' | 'high';
+      const score = primaryResult.score;
+      const label = primaryResult.label.toLowerCase();
+
+      const highRiskConditions = ['melanoma', 'squamous cell carcinoma', 'basal cell carcinoma'];
+      const mediumRiskConditions = ['actinic keratosis', 'dysplastic nevus', 'atypical mole'];
+
+      if (highRiskConditions.some(condition => label.includes(condition))) {
+        risk = score > 0.6 ? 'high' : score > 0.3 ? 'medium' : 'low';
+      } else if (mediumRiskConditions.some(condition => label.includes(condition))) {
+        risk = score > 0.7 ? 'medium' : 'low';
+      } else {
+        risk = score > 0.8 ? 'low' : score > 0.5 ? 'medium' : 'high';
+      }
+
+      setResult({
+        risk,
+        confidence: score
+      });
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast({
+        title: "Analysis Error",
+        description: "There was an error analyzing the image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setAnalyzing(false);
-    }, 2000);
+    }
   };
 
   const handleReset = () => {
